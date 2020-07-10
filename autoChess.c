@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h> 
 
+//include the header file
 #include "autoChess.h"
 
 //create a new baord in memory (constructor)
