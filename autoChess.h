@@ -19,9 +19,6 @@ struct board {
     //int score;
 } typedef board_td;
 
-//define a null pointer for better readability 
-#define NULL 0
-
 //the depth we want to make the simulation of future steps max out to
 #define SIM_DEPTH 4
 
@@ -38,8 +35,14 @@ typedef enum {false, true} bool;
 //allocate and return a pointer to a new board struct in memory
 board_td* newBoard();
 
-//main function
-int main();
+//copy the square struct orig and return a pointer to a deep copy 
+square_td* copySq(square_td* orig);
+
+//check if two square structs are the same 
+bool equalSq(square_td* a, square_td* b);
+
+//check if square sq on board brd is occupied, returning a pointer to the occupying piece if so
+piece_td* isOccupied(board_td* brd, square_td* sq);
 
 //get the score for board_td struct for a given colour 
 int getScore(board_td* brd, char colour);
@@ -53,3 +56,8 @@ bool inCheckMate(board_td* brd, char colour);
 //move a piece from ci, ri to cf, rf on board brd 
 board_td* movePiece(board_td* brd, char ci, int ri, char cf, int rf);
 
+void generateMoves(board_td* brd);
+
+void setInit(board_td* brd);
+
+void printBoard(board_td* brd);
