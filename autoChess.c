@@ -22,8 +22,6 @@ board_td* newBoard() {
         }
     }
 
-    
-
     newBrd->numPieces = 32;
 
     return newBrd;
