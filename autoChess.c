@@ -109,6 +109,9 @@ int main() {
     //write out the test file
     printBoard(readIn);
 
+    //test inCheck
+    inCheck(readIn, 'b');
+
     //free both boards 
     freeBoard(readIn);
     //freeBoard(brd);
@@ -176,8 +179,40 @@ int getScore(board_td* brd, char colour) {
     return scoreOut;
 }
 
-//check whether the given colour is in check TODO
+//check whether the given colour is in check 
 bool inCheck(board_td* brd, char colour) {
+    
+    piece_td** pieceArr = brd->layout; 
+
+    //find the king of the colour we want 
+    int kingInd = 0;
+    while (pieceArr[kingInd]->colour != colour || pieceArr[kingInd]->type != 'g') {
+        kingInd++;
+    }
+
+    //go through every piece on the board 
+    for (int i = 0; i < brd->numPieces; i++) {
+        
+        //ignore pieces of the same colour as the friendly king
+        if (pieceArr[i]->colour == colour) {
+            continue;
+        } else {
+            
+            //go through this (enemy) piece's every legal move
+            int moveInd = 0;
+            while (pieceArr[i]->moves[moveInd]->row != 0) {
+                
+                //if one of its legal moves is the square on which the king sits, return true
+                if (pieceArr[i]->moves[moveInd]->row == pieceArr[kingInd]->pos->row && pieceArr[i]->moves[moveInd]->col == pieceArr[kingInd]->pos->col) {
+                    return true;
+                }
+
+                moveInd++;
+            }
+
+        }
+    }
+    
     return false;
 }
 
@@ -186,9 +221,9 @@ bool inCheckMate(board_td* brd, char colour) {
     return false;
 }
 
-//move a piece from ci, ri to cf, rf on board brd TODO
-board_td* movePiece(board_td* brd, char ci, int ri, char cf, int rf) {
-
+//move a piece on board brd TODO
+board_td* movePiece(board_td* brd, int pieceInd, int moveInd) {
+    
 }
 
 //gernerate all legal moves for all pieces on brd, placing them in the "moves" field of the piece_td structs
@@ -320,15 +355,20 @@ void generateMoves(board_td* brd) {
                             //increment the position we're looking at 
                             advancePos->row += i;
                         }
+
+                        advancePos->row = currPiece->pos->row;
+                        advancePos->col = currPiece->pos->col; 
                     }
 
+                    
+
                     //do the plus and minus directions
-                    for (int i = -1; i < 2; i+=2) {
+                    for (int i = -1; i <= 1; i+=2) {
 
                         //increment advancePos to start checks off of the current position
                         advancePos->col += i;
                         //check whether the position is occupied
-                        while (occupant(brd, advancePos) == NULL && advancePos->row >= 'a' && advancePos->row <= 'h') {
+                        while (occupant(brd, advancePos) == NULL && advancePos->col >= 'a' && advancePos->col <= 'h') {
                             
                             //add the current position to the list of legal moves
                             currPiece->moves[movesAdded] = copySq(advancePos);
@@ -349,6 +389,9 @@ void generateMoves(board_td* brd) {
                             //increment the position we're looking at 
                             advancePos->col += i;
                         }
+
+                        advancePos->row = currPiece->pos->row;
+                        advancePos->col = currPiece->pos->col; 
                     }
 
                     //if we're dealing with a rook, this is the end of the line
@@ -414,7 +457,7 @@ void generateMoves(board_td* brd) {
                             advancePos->col = currPiece->pos->col + j;
                             
                             //if the square is occupied by an enemy or empty, add it to the list of legals 
-                            if (occupant(brd, advancePos) == NULL || occupant(brd, advancePos)->colour != currPiece->colour) {
+                            if ((occupant(brd, advancePos) == NULL || occupant(brd, advancePos)->colour != currPiece->colour) && (advancePos->row <= 8 && advancePos->row >= 0 && advancePos->col <= 'h' && advancePos->col >= 'a')) {
                                 //add the current position to the list of legal moves
                                 currPiece->moves[movesAdded] = copySq(advancePos);
                                 movesAdded++;
@@ -432,7 +475,7 @@ void generateMoves(board_td* brd) {
                             advancePos->col = currPiece->pos->col + j;
                             
                             //if the square is occupied by an enemy or empty, add it to the list of legals 
-                            if (occupant(brd, advancePos) == NULL || occupant(brd, advancePos)->colour != currPiece->colour) {
+                            if ((occupant(brd, advancePos) == NULL || occupant(brd, advancePos)->colour != currPiece->colour)  && (advancePos->row <= 8 && advancePos->row >= 0 && advancePos->col <= 'h' && advancePos->col >= 'a')) {
                                 //add the current position to the list of legal moves
                                 currPiece->moves[movesAdded] = copySq(advancePos);
                                 movesAdded++;
@@ -480,6 +523,8 @@ void generateMoves(board_td* brd) {
 move_td* simulate(board_td* brd, char colour, int depth) {
     //generate the legal moves for all the pieces on the board 
     generateMoves(brd);
+
+
 
     if (depth == 1) {
         //base case 

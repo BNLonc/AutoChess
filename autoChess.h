@@ -43,34 +43,34 @@ typedef enum {false, true} bool;
 board_td* newBoard();
 
 //copy the square struct orig and return a pointer to a deep copy 
-square_td* copySq(square_td* orig);
+square_td* copySq(square_td*);
 
 //check if two square structs are the same 
-bool equalSq(square_td* a, square_td* b);
+bool equalSq(square_td*, square_td*);
 
 //check if square sq on board brd is occupied, returning a pointer to the occupying piece if so
-piece_td* occupant(board_td* brd, square_td* sq);
+piece_td* occupant(board_td*, square_td*);
 
 //get the score for board_td struct for a given colour 
-int getScore(board_td* brd, char colour);
+int getScore(board_td*, char);
 
 //check whether the given colour is in check 
-bool inCheck(board_td* brd, char colour);
+bool inCheck(board_td*, char);
 
 //check whether the given colour is in checkmate
-bool inCheckMate(board_td* brd, char colour);
+bool inCheckMate(board_td*, char);
 
 //move a piece from ci, ri to cf, rf on board brd 
-board_td* movePiece(board_td* brd, char ci, int ri, char cf, int rf);
+board_td* movePiece(board_td*, int, int);
 
-void generateMoves(board_td* brd);
+void generateMoves(board_td*);
 
-move_td* simulate(board_td* brd, char colour, int depth);
+move_td* simulate(board_td*, char, int);
 
-void setInit(board_td* brd);
+void setInit(board_td*);
 
-void printBoard(board_td* brd);
+void printBoard(board_td*);
 
-void writeBoard(board_td* brd, char*);
+void writeBoard(board_td*, char*);
 
 board_td* readBoard(char*);
