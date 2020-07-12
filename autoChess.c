@@ -22,9 +22,29 @@ board_td* newBoard() {
         }
     }
 
-    newBrd->numPieces = 32;
+    newBrd->numPieces = 0;
 
     return newBrd;
+}
+
+//destructor for boards
+void freeBoard(board_td* brd) {
+
+    for (int i = 0; i < 32; i++) {
+        free(brd->layout[i]->pos);
+
+        for (int j = 0; j < 30; j++) {
+            free(brd->layout[i]->moves[j]);
+        }
+
+        free(brd->layout[i]->moves);
+
+        free(brd->layout[i]);
+    }
+
+    free(brd->layout);
+
+    free(brd);
 }
 
 //copy the square struct orig and return a pointer to a deep copy 
@@ -45,7 +65,7 @@ bool equalSq(square_td* a, square_td* b) {
 }
 
 //check if square sq on board brd is occupied, returning a pointer to the occupying piece if so
-piece_td* isOccupied(board_td* brd, square_td* sq) {
+piece_td* occupant(board_td* brd, square_td* sq) {
     //hold a pointer to the current piece 
     piece_td* currPiece;
 
@@ -70,45 +90,86 @@ piece_td* isOccupied(board_td* brd, square_td* sq) {
 
 //mian function TODO 
 int main() {
-    board_td* brd = newBoard();
-    
+    //create and set up an initial test board
+    /*board_td* brd = newBoard();
     setInit(brd);
-
+    //print the test board 
     printBoard(brd);
+
+    printf("\n");
+
+    
+    //write out the test board
+    writeBoard(brd, "brdOut.txt");*/
+    //read in the test file 
+    board_td* readIn = readBoard("brdTst.txt");
+    
+    simulate(readIn, 'w', SIM_DEPTH);
+    
+    //write out the test file
+    printBoard(readIn);
+
+    //free both boards 
+    freeBoard(readIn);
+    //freeBoard(brd);
 
     return 0;
 }
 
 //get the score for board_td struct for a given colour 
 int getScore(board_td* brd, char colour) {
-    int scoreOut = 0; //variable to hold the score to output  
+
+    //variable to hold the score to output
+    int scoreOut = 0; 
+
+    char opposingColour = 'b';
+
+    if (colour == 'b') {
+        opposingColour = 'w';
+    }
 
     if (inCheckMate(brd, colour)) {
         return 6942069;
-    }
-    if (inCheck(brd, colour)) {
-        scoreOut = QUEE_VAL * 2;
+    } else if (inCheckMate(brd, opposingColour)) {
+        return -6942069;
     }
     
+    //check about being in check
+    if (inCheck(brd, colour)) {
+        scoreOut -= QUEE_VAL * 2;
+    }
+    if (inCheck(brd, opposingColour)) {
+        scoreOut += QUEE_VAL * 2;
+    }
+
+    piece_td* currPiece = NULL; 
+    int enemyOffset = 0;
+
     for (int i = 0; i < brd->numPieces; i++) {
-        switch ((brd->layout[i])->type) {
+        currPiece = brd->layout[i];
+
+        enemyOffset = ((currPiece->colour == opposingColour)? -1 : 1);
+
+        switch (currPiece->type) {
             case 'p':
-                scoreOut += PAWN_VAL;
+                scoreOut += enemyOffset * PAWN_VAL;
                 break;
             case 'r':
-                scoreOut += ROOK_VAL;
+                scoreOut += enemyOffset * ROOK_VAL;
                 break;
             case 'k':
-                scoreOut += KNIG_VAL;
+                scoreOut += enemyOffset * KNIG_VAL;
                 break;
             case 'b':
-                scoreOut += BISH_VAL;
+                scoreOut += enemyOffset * BISH_VAL;
                 break;
             case 'q':
-                scoreOut += QUEE_VAL;
+                scoreOut += enemyOffset * QUEE_VAL;
+                break;
+            case 'g':
                 break;
             default: 
-                printf("u dun goofed piece type flags");
+                printf("u dun goofed piece type flags\n");
         }
     }
 
@@ -117,12 +178,12 @@ int getScore(board_td* brd, char colour) {
 
 //check whether the given colour is in check TODO
 bool inCheck(board_td* brd, char colour) {
-    
+    return false;
 }
 
 //check whether the given colour is in checkmate TODO
 bool inCheckMate(board_td* brd, char colour) {
-
+    return false;
 }
 
 //move a piece from ci, ri to cf, rf on board brd TODO
@@ -143,9 +204,9 @@ void generateMoves(board_td* brd) {
         if (currPiece != NULL) { //TODO what the hell is the null identifier?
             
             //clear out the list of legals 
-            for (int i = 0; i < 30; i++) { 
-                free(currPiece->moves[i]);
-                currPiece->moves[i] = NULL; 
+            for (int i = 0; i < 30; i++) {
+                currPiece->moves[i]->row = 0;
+                currPiece->moves[i]->col = 0; 
             } 
 
             //the number of moves we've added to the list of legal moves on the current piece 
@@ -183,7 +244,7 @@ void generateMoves(board_td* brd) {
                     advancePos->row += 2 * blackOffset; 
 
                     //if this pawn hasn't moved and the square two squares up isn't occupied 
-                    if (currPiece->pos->row == stationaryRow && isOccupied(brd, advancePos) == NULL) { 
+                    if (currPiece->pos->row == stationaryRow && occupant(brd, advancePos) == NULL) { 
                         //add the current position advanced by two squares to legals
                         currPiece->moves[movesAdded] = copySq(advancePos);
                         //increment the legals 
@@ -195,7 +256,7 @@ void generateMoves(board_td* brd) {
                     advancePos->row -= 1 * blackOffset;
 
                     //if the square one square up isn't occupied 
-                    if (!isOccupied(brd, advancePos)) { 
+                    if (!occupant(brd, advancePos)) { 
                         //add the current position advanced by two squares to legals
                         currPiece->moves[movesAdded] = copySq(advancePos); 
                         //increment the legals 
@@ -209,7 +270,7 @@ void generateMoves(board_td* brd) {
                     //do the capture check twice, reusing the code in a kinda cheeky and ugly way
                     for (int loopCount = 0; loopCount < 2; loopCount++) {
                         //hold a pointer to the target piece for the capture  
-                        piece_td* target = isOccupied(brd, advancePos);
+                        piece_td* target = occupant(brd, advancePos);
                         
                         //just move on if there's nothing to think about capturing and the square up one and over one is occupied by an opponent piece
                         if (target != NULL && target->colour != currPiece->colour) {
@@ -222,19 +283,23 @@ void generateMoves(board_td* brd) {
                     }
 
                     //HANDLE EN PASSANT 
-                    
+                    //TODO
                     
 
                     break;
+
+                //handle queens (which really just falls through the cases for rooks and bishops)
+                case 'q': ;
+                //handle rooks 
                 case 'r': ;
 
                     //do the plus and minus directions
-                    for (int i = -1; i < 2; i+=2) {
+                    for (int i = -1; i <= 1; i+=2) {
 
                         //increment advancePos to start checks off of the current position
                         advancePos->row += i;
                         //check whether the position is occupied
-                        while (isOccupied(brd, advancePos) == NULL) {
+                        while (occupant(brd, advancePos) == NULL && advancePos->row >= 1 && advancePos->row <= 8) {
                             
                             //add the current position to the list of legal moves
                             currPiece->moves[movesAdded] = copySq(advancePos);
@@ -243,9 +308,11 @@ void generateMoves(board_td* brd) {
                             //increment the position we're looking at 
                             advancePos->row += i;
                         }
-                        
+
+                        piece_td* finalPos = occupant(brd, advancePos);
+
                         //if the piece we stopped at is a piece of the opposing colour 
-                        if (isOccupied(brd, advancePos)->colour != currPiece->colour) {
+                        if (finalPos != NULL && (finalPos->colour != currPiece->colour)) {
                             //add the current position to the list of legal moves
                             currPiece->moves[movesAdded] = copySq(advancePos);
                             movesAdded++;
@@ -261,7 +328,7 @@ void generateMoves(board_td* brd) {
                         //increment advancePos to start checks off of the current position
                         advancePos->col += i;
                         //check whether the position is occupied
-                        while (isOccupied(brd, advancePos) == NULL) {
+                        while (occupant(brd, advancePos) == NULL && advancePos->row >= 'a' && advancePos->row <= 'h') {
                             
                             //add the current position to the list of legal moves
                             currPiece->moves[movesAdded] = copySq(advancePos);
@@ -271,8 +338,10 @@ void generateMoves(board_td* brd) {
                             advancePos->col += i;
                         }
                         
+                        piece_td* finalPos = occupant(brd, advancePos);
+
                         //if the piece we stopped at is a piece of the opposing colour 
-                        if (isOccupied(brd, advancePos)->colour != currPiece->colour) {
+                        if (finalPos != NULL && (finalPos->colour != currPiece->colour)) {
                             //add the current position to the list of legal moves
                             currPiece->moves[movesAdded] = copySq(advancePos);
                             movesAdded++;
@@ -282,17 +351,27 @@ void generateMoves(board_td* brd) {
                         }
                     }
 
-                    break;
+                    //if we're dealing with a rook, this is the end of the line
+                    if (currPiece->type == 'r') {
+                        break;
+                    }
 
-                    break;
+                    //if we're not dealing with a rook, we're dealing with a queen
+                    //reset the position of advancePos to set up for the case 'b' code we're about to fall into 
+                    advancePos->row = currPiece->pos->row;
+                    advancePos->col = currPiece->pos->col;
+                    
                 case 'b': ;
                     
                     //run the four diagonal directions
-                    for (int i = -1; i < 2; i += 2) {
-                        for (int j = -1; j < 2; j += 2) {
+                    for (int i = -1; i <= 1; i += 2) {
+                        for (int j = -1; j <= 1; j += 2) {
+                            
+                            advancePos->col += i;
+                            advancePos->row += j;
                             
                             //run one diagonal 
-                            while (isOccupied(brd, advancePos) == NULL) {
+                            while (occupant(brd, advancePos) == NULL && advancePos->col >= 'a' && advancePos->col <= 'h' && advancePos->row >= 1 && advancePos->row <= 8) {
                                 
                                 //add the current position to the list of legal moves
                                 currPiece->moves[movesAdded] = copySq(advancePos);
@@ -303,8 +382,10 @@ void generateMoves(board_td* brd) {
                                 advancePos->row += j;
                             }
 
+                            piece_td* finalPos = occupant(brd, advancePos);
+
                             //if the piece we stopped at is a piece of the opposing colour 
-                            if (isOccupied(brd, advancePos)->colour != currPiece->colour) {
+                            if (finalPos != NULL && (finalPos->colour != currPiece->colour)) {
                                 
                                 //add the current position to the list of legal moves
                                 currPiece->moves[movesAdded] = copySq(advancePos);
@@ -314,6 +395,10 @@ void generateMoves(board_td* brd) {
                                 advancePos->col += i;
                                 advancePos->row += j;
                             }
+
+                            advancePos->row = currPiece->pos->row;
+                            advancePos->col = currPiece->pos->col;
+                            
                         }
                     }
 
@@ -329,7 +414,7 @@ void generateMoves(board_td* brd) {
                             advancePos->col = currPiece->pos->col + j;
                             
                             //if the square is occupied by an enemy or empty, add it to the list of legals 
-                            if (isOccupied(brd, advancePos) == NULL || isOccupied(brd, advancePos)->colour != currPiece->colour) {
+                            if (occupant(brd, advancePos) == NULL || occupant(brd, advancePos)->colour != currPiece->colour) {
                                 //add the current position to the list of legal moves
                                 currPiece->moves[movesAdded] = copySq(advancePos);
                                 movesAdded++;
@@ -347,7 +432,7 @@ void generateMoves(board_td* brd) {
                             advancePos->col = currPiece->pos->col + j;
                             
                             //if the square is occupied by an enemy or empty, add it to the list of legals 
-                            if (isOccupied(brd, advancePos) == NULL || isOccupied(brd, advancePos)->colour != currPiece->colour) {
+                            if (occupant(brd, advancePos) == NULL || occupant(brd, advancePos)->colour != currPiece->colour) {
                                 //add the current position to the list of legal moves
                                 currPiece->moves[movesAdded] = copySq(advancePos);
                                 movesAdded++;
@@ -355,96 +440,6 @@ void generateMoves(board_td* brd) {
                             
                         }
                     }
-                    break;
-                case 'q': ;
-                    
-                    //run the four diagonal directions
-                    for (int i = -1; i < 2; i += 2) {
-                        for (int j = -1; j < 2; j += 2) {
-                            
-                            //run one diagonal 
-                            while (isOccupied(brd, advancePos) == NULL) {
-                                
-                                //add the current position to the list of legal moves
-                                currPiece->moves[movesAdded] = copySq(advancePos);
-                                movesAdded++;
-
-                                //increment in the given direction 
-                                advancePos->col += i;
-                                advancePos->row += j;
-                            }
-
-                            //if the piece we stopped at is a piece of the opposing colour 
-                            if (isOccupied(brd, advancePos)->colour != currPiece->colour) {
-                                
-                                //add the current position to the list of legal moves
-                                currPiece->moves[movesAdded] = copySq(advancePos);
-                                movesAdded++;
-
-                                //increment the position we're looking at 
-                                advancePos->col += i;
-                                advancePos->row += j;
-                            }
-                        }
-                    }
-
-                    advancePos->row = currPiece->pos->row;
-                    advancePos->col = currPiece->pos->col;
-
-                    //do the plus and minus directions
-                    for (int i = -1; i < 2; i+=2) {
-
-                        //increment advancePos to start checks off of the current position
-                        advancePos->row += i;
-                        //check whether the position is occupied
-                        while (isOccupied(brd, advancePos) == NULL) {
-                            
-                            //add the current position to the list of legal moves
-                            currPiece->moves[movesAdded] = copySq(advancePos);
-                            movesAdded++;
-
-                            //increment the position we're looking at 
-                            advancePos->row += i;
-                        }
-                        
-                        //if the piece we stopped at is a piece of the opposing colour 
-                        if (isOccupied(brd, advancePos)->colour != currPiece->colour) {
-                            //add the current position to the list of legal moves
-                            currPiece->moves[movesAdded] = copySq(advancePos);
-                            movesAdded++;
-
-                            //increment the position we're looking at 
-                            advancePos->row += i;
-                        }
-                    }
-
-                    //do the plus and minus directions
-                    for (int i = -1; i < 2; i+=2) {
-
-                        //increment advancePos to start checks off of the current position
-                        advancePos->col += i;
-                        //check whether the position is occupied
-                        while (isOccupied(brd, advancePos) == NULL) {
-                            
-                            //add the current position to the list of legal moves
-                            currPiece->moves[movesAdded] = copySq(advancePos);
-                            movesAdded++;
-
-                            //increment the position we're looking at 
-                            advancePos->col += i;
-                        }
-                        
-                        //if the piece we stopped at is a piece of the opposing colour 
-                        if (isOccupied(brd, advancePos)->colour != currPiece->colour) {
-                            //add the current position to the list of legal moves
-                            currPiece->moves[movesAdded] = copySq(advancePos);
-                            movesAdded++;
-
-                            //increment the position we're looking at 
-                            advancePos->col += i;
-                        }
-                    }
-
                     break;
                 case 'g': ;
                     //go around the piece and examine each position 
@@ -460,7 +455,7 @@ void generateMoves(board_td* brd) {
                             advancePos->col = currPiece->pos->col + j;
 
                             //if advancePos is unoccupied or occupied by an enemy
-                            if (isOccupied(brd, advancePos) == NULL || isOccupied(brd, advancePos)->colour != currPiece->colour) {
+                            if (occupant(brd, advancePos) == NULL || occupant(brd, advancePos)->colour != currPiece->colour) {
                                 //add the current position to the list of legal moves
                                 currPiece->moves[movesAdded] = copySq(advancePos);
                                 movesAdded++;
@@ -471,7 +466,7 @@ void generateMoves(board_td* brd) {
 
                     break;
                 default: ;
-                    printf("you dun goofed piece selection");
+                    printf("you dun goofed piece selection\n");
                     break;
             }
 
@@ -481,8 +476,27 @@ void generateMoves(board_td* brd) {
     }
 }
 
+//run one layer of the simulation
+move_td* simulate(board_td* brd, char colour, int depth) {
+    //generate the legal moves for all the pieces on the board 
+    generateMoves(brd);
+
+    if (depth == 1) {
+        //base case 
+
+    } else {
+        //recursive case 
+
+    }
+
+    
+    return NULL;
+}
+
 //set up a default board
 void setInit(board_td* brd) {
+    brd->numPieces = 32;
+
     for (int offset = 0; offset <= 16; offset += 16) {
         piece_td* currPiece;
         
@@ -540,13 +554,13 @@ void setInit(board_td* brd) {
 
 //print out a board 
 void printBoard(board_td* brd) {
-    for (int r = 1; r <= 8; r++) { //for every row
+    for (int r = 8; r >= 1; r--) { //for every row
         for (char c = 'a'; c <= 'h'; c += 1) { //for every column
             char output = '.';
 
             for (int i = 0; i < brd->numPieces; i++) { //for every piece
                 if (brd->layout[i]->pos->row == r && brd->layout[i]->pos->col == c) { //check whether current coords match the current piece
-                    output = brd->layout[i]->type /*+ (brd->layout[i]->colour == 'w')? 32 : 0*/; 
+                    output = brd->layout[i]->type - ((brd->layout[i]->colour == 'w')? 32 : 0); 
                     break;
                 }
             }
@@ -556,4 +570,91 @@ void printBoard(board_td* brd) {
 
         printf("%c", '\n');
     }
+}
+
+void writeBoard(board_td* brd, char* name) {
+    FILE* fp = fopen(name, "w");
+
+    for (int r = 8; r >= 1; r--) { //for every row
+        for (char c = 'a'; c <= 'h'; c += 1) { //for every column
+            char output = '.';
+
+            for (int i = 0; i < brd->numPieces; i++) { //for every piece
+                if (brd->layout[i]->pos->row == r && brd->layout[i]->pos->col == c) { //check whether current coords match the current piece
+                    output = brd->layout[i]->type - ((brd->layout[i]->colour == 'w')? 32 : 0); 
+                    break;
+                }
+            }
+
+            fprintf(fp, "%c", output);
+        }
+
+        fprintf(fp, "%c", '\n');
+    }
+
+    fclose(fp);
+}
+
+board_td* readBoard(char* name) {
+    board_td* brd = newBoard();
+
+    int pieceIndex = 0;
+
+    FILE* fp = fopen(name, "r");
+
+    char* input = malloc(sizeof(char) * 64);
+    char* inputTraverse = input;
+
+    fread(input, sizeof(char), 71, fp);
+
+    for (int r = 8; r >= 1; r--) { //for every row
+        for (char c = 'a'; c <= 'h' + 1; c += 1) { //for every column
+            
+            //if we're about to read too many pieces, just stop
+            if (pieceIndex >= 32) {
+                continue;
+            }
+
+            //read in the piece 
+            char pieceIn = *inputTraverse;
+            if (pieceIn != '.' && pieceIn != '\n') {
+                //skip the empty squares and line breaks
+            
+                //we've hit a piece 
+                brd->numPieces++;
+
+                //set a pointer to the spot for the current piece we're reading in 
+                piece_td* currPiece = brd->layout[pieceIndex];
+
+                //check for colour and standardise case 
+                if (pieceIn >= 'a') {
+                    currPiece->colour = 'b';
+                } else {
+                    currPiece->colour = 'w';
+
+                    pieceIn += 32;
+                }
+
+                //set the type 
+                currPiece->type = pieceIn;
+
+                //set the position 
+                currPiece->pos->row = r;
+                currPiece->pos->col = c;
+
+                //move the index to the next space in the board object  
+                pieceIndex++;
+            }
+
+            //move the index to the next char in the string 
+            inputTraverse++;
+        }
+    }
+
+    //free the string we used to read the board in 
+    free(input);
+    //close the file we're reading in 
+    fclose(fp);
+
+    return brd;
 }

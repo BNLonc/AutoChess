@@ -1,3 +1,10 @@
+//a struct to hold a move 
+struct move {
+    int pieceInd;
+    int moveInd;
+    int score;
+} typedef move_td;
+
 struct square {
     int row;
     char col;
@@ -42,7 +49,7 @@ square_td* copySq(square_td* orig);
 bool equalSq(square_td* a, square_td* b);
 
 //check if square sq on board brd is occupied, returning a pointer to the occupying piece if so
-piece_td* isOccupied(board_td* brd, square_td* sq);
+piece_td* occupant(board_td* brd, square_td* sq);
 
 //get the score for board_td struct for a given colour 
 int getScore(board_td* brd, char colour);
@@ -58,6 +65,12 @@ board_td* movePiece(board_td* brd, char ci, int ri, char cf, int rf);
 
 void generateMoves(board_td* brd);
 
+move_td* simulate(board_td* brd, char colour, int depth);
+
 void setInit(board_td* brd);
 
 void printBoard(board_td* brd);
+
+void writeBoard(board_td* brd, char*);
+
+board_td* readBoard(char*);
