@@ -31,20 +31,27 @@ board_td* newBoard() {
 void freeBoard(board_td* brd) {
 
     for (int i = 0; i < 32; i++) {
-        free(brd->layout[i]->pos);
-
-        for (int j = 0; j < 30; j++) {
-            free(brd->layout[i]->moves[j]);
+        if (brd->layout[i] != NULL) {
+            freePiece(brd->layout[i]);
         }
-
-        free(brd->layout[i]->moves);
-
-        free(brd->layout[i]);
     }
 
     free(brd->layout);
 
     free(brd);
+}
+
+//destructor for pieces 
+void freePiece(piece_td* piece) {
+    free(piece->pos);
+
+        for (int j = 0; j < 30; j++) {
+            free(piece->moves[j]);
+        }
+
+        free(piece->moves);
+
+        free(piece);
 }
 
 //copy the square struct orig and return a pointer to a deep copy 
@@ -88,7 +95,7 @@ piece_td* occupant(board_td* brd, square_td* sq) {
     return NULL;
 }
 
-//mian function TODO 
+//mian function 
 int main() {
     //create and set up an initial test board
     /*board_td* brd = newBoard();
@@ -106,15 +113,27 @@ int main() {
     
     simulate(readIn, 'w', SIM_DEPTH);
     
+    bool cm = inCheckMate(readIn, 'b');
+
+    if (cm) {
+        printf("true");
+    } else {
+        printf("false");
+    }
+
+    //board_td* copy = copyBoard(readIn);
+
+    //writeBoard(copy, "copy.txt");
+
     //write out the test file
-    printBoard(readIn);
+    //printBoard(readIn);
 
     //test inCheck
-    inCheck(readIn, 'b');
+    //inCheck(readIn, 'b');
 
     //free both boards 
     freeBoard(readIn);
-    //freeBoard(brd);
+    //freeBoard(copy);
 
     return 0;
 }
@@ -179,6 +198,73 @@ int getScore(board_td* brd, char colour) {
     return scoreOut;
 }
 
+//make a deep copy of a board 
+board_td* copyBoard(board_td* orig) {
+    
+    //allocate a new board
+    board_td* newBrd = newBoard();
+
+    //copy the numPieces over 
+    newBrd->numPieces = orig->numPieces;
+
+    //copy the pieces in the layout array 
+    int i = 0;
+    while (i < newBrd->numPieces) {
+        piece_td* newPiece = newBrd->layout[i];
+        piece_td* origPiece = orig->layout[i];
+
+        newPiece->pos = copySq(origPiece->pos);
+        newPiece->type = origPiece->type;
+        newPiece->colour = origPiece->colour;
+        
+        for (int j = 0; j < 30; j++) {
+            newPiece->moves[j]->row = origPiece->moves[j]->row;
+            newPiece->moves[j]->col = origPiece->moves[j]->col;
+        }
+
+        i++;
+    }
+
+    while (i < 32) {
+        if (newBrd->layout[i] != NULL) {
+            freePiece(newBrd->layout[i]);
+            newBrd->layout[i] = NULL;
+        }
+        i++;
+    }
+
+    return newBrd; 
+}
+
+//soft-copy a board 
+void softCopyBoard(board_td* recip, board_td* orig) {
+    recip->numPieces = orig->numPieces;
+
+    int i = 0;
+
+    while (i < recip->numPieces) {
+        piece_td* recipPiece = recip->layout[i];
+        piece_td* origPiece = orig->layout[i];
+
+        recipPiece->pos->row = origPiece->pos->row;
+        recipPiece->pos->col = origPiece->pos->col;
+        recipPiece->type = origPiece->type;
+        recipPiece->colour = origPiece->colour;
+
+        for (int j = 0; j < 30; j++) {
+            recipPiece->moves[j]->row = origPiece->moves[j]->row;
+            recipPiece->moves[j]->col = origPiece->moves[j]->col;
+        }
+
+        i++;
+    }
+
+    while (i < 32) {
+        recip->layout[i] = NULL;
+        i++;
+    }
+}
+
 //check whether the given colour is in check 
 bool inCheck(board_td* brd, char colour) {
     
@@ -216,14 +302,90 @@ bool inCheck(board_td* brd, char colour) {
     return false;
 }
 
-//check whether the given colour is in checkmate TODO
+//check whether the given colour is in checkmate 
 bool inCheckMate(board_td* brd, char colour) {
-    return false;
+    /*NOTE: I'm assuming that the legal moves attached to each piece on brd are 
+    good and reliable as they come in*/
+
+    //make sure we're actually in check first lmao
+    if (inCheck(brd, colour)) {
+        
+        //create a hypothetical board to work on 
+        board_td* hypo = copyBoard(brd);
+        
+        //for every friendly piece on the board
+        for (int i = 0; i < hypo->numPieces; i++) {
+            
+            //set up a shortcut pointer to the current piece 
+            piece_td* currPiece = hypo->layout[i];
+
+            //continue; if the current piece is unfriendly 
+            if (currPiece->colour != colour) {
+                continue;
+            }
+
+            //for every move that this piece can do...
+            int moveInd = 0;
+            while (currPiece->moves[moveInd]->row != 0) {
+                
+                //do it and then see if we're no longer in check 
+                movePiece(hypo, i, moveInd);
+
+                //if we did a move and are no longer in check, free the hypo board and return false 
+                if (!inCheck(hypo, colour)) {
+                    freeBoard(hypo);
+                    return false;
+                }
+
+                //if we get here, we didn't get out of check by making that move, so let's reset the hypo board 
+                softCopyBoard(hypo, brd);
+                generateMoves(hypo);
+
+                moveInd++;
+            }
+
+        }
+
+        freeBoard(hypo);
+        return true;
+
+    } else {
+        return false;
+    }
 }
 
-//move a piece on board brd TODO
-board_td* movePiece(board_td* brd, int pieceInd, int moveInd) {
+//move a piece on board brd 
+void movePiece(board_td* brd, int pieceInd, int moveInd) {
     
+    //point to the piece we're going to land on when we move 
+    square_td* landPos = brd->layout[pieceInd]->moves[moveInd];
+
+    //go through the pieces 
+    int capInd = 0;
+    while (capInd < brd->numPieces) {
+        
+        //break if we've found a piece we're going to land on 
+        square_td* targetPos = brd->layout[capInd]->pos;
+        if (equalSq(targetPos, landPos)) {
+            break;
+        }
+        
+        capInd++;
+    }
+
+    //if we're going to land on a piece, destroy it
+    if (capInd < brd->numPieces) {
+        freePiece(brd->layout[capInd]);
+
+        brd->layout[capInd] = brd->layout[brd->numPieces - 1];
+        brd->layout[brd->numPieces - 1] = NULL;
+        brd->numPieces--;
+    }
+
+    brd->layout[pieceInd]->pos->row = landPos->row;
+    brd->layout[pieceInd]->pos->col = landPos->col;  
+
+    generateMoves(brd);
 }
 
 //gernerate all legal moves for all pieces on brd, placing them in the "moves" field of the piece_td structs
@@ -236,12 +398,12 @@ void generateMoves(board_td* brd) {
         piece_td* currPiece = brd->layout[i]; 
 
         //check that the piece whose moves we're about to generate exists
-        if (currPiece != NULL) { //TODO what the hell is the null identifier?
+        if (currPiece != NULL) { 
             
             //clear out the list of legals 
-            for (int i = 0; i < 30; i++) {
-                currPiece->moves[i]->row = 0;
-                currPiece->moves[i]->col = 0; 
+            for (int j = 0; j < 30; j++) {
+                currPiece->moves[j]->row = 0;
+                currPiece->moves[j]->col = 0; 
             } 
 
             //the number of moves we've added to the list of legal moves on the current piece 
@@ -524,8 +686,6 @@ move_td* simulate(board_td* brd, char colour, int depth) {
     //generate the legal moves for all the pieces on the board 
     generateMoves(brd);
 
-
-
     if (depth == 1) {
         //base case 
 
@@ -656,7 +816,7 @@ board_td* readBoard(char* name) {
         for (char c = 'a'; c <= 'h' + 1; c += 1) { //for every column
             
             //if we're about to read too many pieces, just stop
-            if (pieceIndex >= 32) {
+            if (r == 1 && c == 'h' + 1) {
                 continue;
             }
 
@@ -700,6 +860,12 @@ board_td* readBoard(char* name) {
     free(input);
     //close the file we're reading in 
     fclose(fp);
+
+    while (pieceIndex <= 31) {
+        freePiece(brd->layout[pieceIndex]);
+        brd->layout[pieceIndex] = NULL;
+        pieceIndex++;
+    }
 
     return brd;
 }

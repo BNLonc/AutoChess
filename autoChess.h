@@ -42,6 +42,10 @@ typedef enum {false, true} bool;
 //allocate and return a pointer to a new board struct in memory
 board_td* newBoard();
 
+void freeBoard(board_td*);
+
+void freePiece(piece_td*);
+
 //copy the square struct orig and return a pointer to a deep copy 
 square_td* copySq(square_td*);
 
@@ -54,14 +58,20 @@ piece_td* occupant(board_td*, square_td*);
 //get the score for board_td struct for a given colour 
 int getScore(board_td*, char);
 
+//make a deep copy of a board 
+board_td* copyBoard(board_td*);
+
+//soft-copy a board
+void softCopyBoard(board_td*, board_td*);
+
 //check whether the given colour is in check 
 bool inCheck(board_td*, char);
 
 //check whether the given colour is in checkmate
-bool inCheckMate(board_td*, char);
+bool inCheckMate(board_td* brd, char colour);
 
 //move a piece from ci, ri to cf, rf on board brd 
-board_td* movePiece(board_td*, int, int);
+void movePiece(board_td*, int, int);
 
 void generateMoves(board_td*);
 
