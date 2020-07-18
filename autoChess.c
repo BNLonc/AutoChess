@@ -11,18 +11,12 @@ board_td* newBoard() {
     newBrd->layout = malloc(sizeof(piece_td*) * 32);
 
     for (int i = 0; i < 32; i++) {
-        newBrd->layout[i] = malloc(sizeof(piece_td));
-
-        newBrd->layout[i]->pos = malloc(sizeof(square_td));
-
-        newBrd->layout[i]->moves = malloc(sizeof(square_td*) * 30);
-
-        for (int j = 0; j < 30; j++) {
-            newBrd->layout[i]->moves[j] = malloc(sizeof(square_td));
-        }
+        newBrd->layout[i] = newPiece();
     }
 
     newBrd->numPieces = 0;
+
+    newBrd->turn = 'w';
 
     return newBrd;
 }
@@ -41,11 +35,26 @@ void freeBoard(board_td* brd) {
     free(brd);
 }
 
+//constructor for pieces
+piece_td* newPiece() {
+    piece_td* newPc = malloc(sizeof(piece_td));
+
+    newPc->pos = malloc(sizeof(square_td));
+
+    newPc->moves = malloc(sizeof(square_td*) * NUM_MOVES);
+
+    for (int j = 0; j < NUM_MOVES; j++) {
+        newPc->moves[j] = malloc(sizeof(square_td));
+    }
+
+    return newPc;
+}
+
 //destructor for pieces 
 void freePiece(piece_td* piece) {
     free(piece->pos);
 
-        for (int j = 0; j < 30; j++) {
+        for (int j = 0; j < NUM_MOVES; j++) {
             free(piece->moves[j]);
         }
 
@@ -97,102 +106,83 @@ piece_td* occupant(board_td* brd, square_td* sq) {
 
 //mian function 
 int main() {
-    //create and set up an initial test board
-    /*board_td* brd = newBoard();
-    setInit(brd);
-    //print the test board 
-    printBoard(brd);
 
-    printf("\n");
+    //FIRST-ORDER FUNCTIONS 
+    piece_td* testPiece = newPiece();
+    freePiece(testPiece);
 
-    
-    //write out the test board
-    writeBoard(brd, "brdOut.txt");*/
-    //read in the test file 
-    board_td* readIn = readBoard("brdTst.txt");
-    
-    simulate(readIn, 'w', SIM_DEPTH);
-    
-    bool cm = inCheckMate(readIn, 'b');
+    board_td* testBrd = newBoard();
+    setInit(testBrd);
+    freeBoard(testBrd);        
 
-    if (cm) {
-        printf("true");
-    } else {
-        printf("false");
-    }
+    printBoard(testBrd);
+    writeBoard(testBrd, "boardOut.txt");
 
-    //board_td* copy = copyBoard(readIn);
+    square_td* sq = malloc(sizeof(square_td));
+    sq->row = 5;
+    sq->col = 'e';
+    square_td* sq2 = malloc(sizeof(square_td));
+    sq->row = 6;
+    sq->col = 'b';
+    square_td* copyTest = copySq(sq);
+    bool equal = equalSq(sq, sq2);
+    bool equal = equalSq(sq, copyTest);
 
-    //writeBoard(copy, "copy.txt");
-
-    //write out the test file
-    //printBoard(readIn);
-
-    //test inCheck
-    //inCheck(readIn, 'b');
-
-    //free both boards 
-    freeBoard(readIn);
-    //freeBoard(copy);
+    free(sq);
+    free(sq2);
+    free(copyTest);
 
     return 0;
 }
 
 //get the score for board_td struct for a given colour 
-int getScore(board_td* brd, char colour) {
+int getScore(board_td* brd) {
 
     //variable to hold the score to output
     int scoreOut = 0; 
 
-    char opposingColour = 'b';
-
-    if (colour == 'b') {
-        opposingColour = 'w';
-    }
-
-    if (inCheckMate(brd, colour)) {
-        return 6942069;
-    } else if (inCheckMate(brd, opposingColour)) {
+    //return a crazy low value if we're in checkmate     
+    if (inCheckMate(brd)) {
         return -6942069;
     }
     
     //check about being in check
-    if (inCheck(brd, colour)) {
+    if (inCheck(brd)) {
         scoreOut -= QUEE_VAL * 2;
-    }
-    if (inCheck(brd, opposingColour)) {
-        scoreOut += QUEE_VAL * 2;
     }
 
     piece_td* currPiece = NULL; 
-    int enemyOffset = 0;
 
+    //traverse all the pieces 
     for (int i = 0; i < brd->numPieces; i++) {
         currPiece = brd->layout[i];
 
-        enemyOffset = ((currPiece->colour == opposingColour)? -1 : 1);
+        //add the piece into the score if it's friendly 
+        if (currPiece->colour == brd->turn) {
+            switch (currPiece->type) {
+                case 'p':
+                    scoreOut += PAWN_VAL;
+                    break;
+                case 'r':
+                    scoreOut += ROOK_VAL;
+                    break;
+                case 'k':
+                    scoreOut += KNIG_VAL;
+                    break;
+                case 'b':
+                    scoreOut += BISH_VAL;
+                    break;
+                case 'q':
+                    scoreOut += QUEE_VAL;
+                    break;
+                case 'g':
+                    break;
+                default: 
+                    printf("u dun goofed piece type flags\n");
+            }
 
-        switch (currPiece->type) {
-            case 'p':
-                scoreOut += enemyOffset * PAWN_VAL;
-                break;
-            case 'r':
-                scoreOut += enemyOffset * ROOK_VAL;
-                break;
-            case 'k':
-                scoreOut += enemyOffset * KNIG_VAL;
-                break;
-            case 'b':
-                scoreOut += enemyOffset * BISH_VAL;
-                break;
-            case 'q':
-                scoreOut += enemyOffset * QUEE_VAL;
-                break;
-            case 'g':
-                break;
-            default: 
-                printf("u dun goofed piece type flags\n");
         }
+
     }
 
     return scoreOut;
@@ -217,7 +207,7 @@ board_td* copyBoard(board_td* orig) {
         newPiece->type = origPiece->type;
         newPiece->colour = origPiece->colour;
         
-        for (int j = 0; j < 30; j++) {
+        for (int j = 0; j < NUM_MOVES; j++) {
             newPiece->moves[j]->row = origPiece->moves[j]->row;
             newPiece->moves[j]->col = origPiece->moves[j]->col;
         }
@@ -238,20 +228,28 @@ board_td* copyBoard(board_td* orig) {
 
 //soft-copy a board 
 void softCopyBoard(board_td* recip, board_td* orig) {
-    recip->numPieces = orig->numPieces;
+    /*recip->numPieces = orig->numPieces;
 
     int i = 0;
-
     while (i < recip->numPieces) {
+        
         piece_td* recipPiece = recip->layout[i];
         piece_td* origPiece = orig->layout[i];
+
+        //copy into slots that were null in the recipient board 
+        if (recipPiece == NULL) {
+            //initialise the slot
+            recip->layout[i] = newPiece();
+            //update the shortcut 
+            recipPiece = recip->layout[i];
+        }
 
         recipPiece->pos->row = origPiece->pos->row;
         recipPiece->pos->col = origPiece->pos->col;
         recipPiece->type = origPiece->type;
         recipPiece->colour = origPiece->colour;
 
-        for (int j = 0; j < 30; j++) {
+        for (int j = 0; j < NUM_MOVES; j++) {
             recipPiece->moves[j]->row = origPiece->moves[j]->row;
             recipPiece->moves[j]->col = origPiece->moves[j]->col;
         }
@@ -262,34 +260,41 @@ void softCopyBoard(board_td* recip, board_td* orig) {
     while (i < 32) {
         recip->layout[i] = NULL;
         i++;
-    }
+    }*/
+
+    freeBoard(recip);
+
+    recip = copyBoard(orig);
 }
 
 //check whether the given colour is in check 
-bool inCheck(board_td* brd, char colour) {
-    
-    piece_td** pieceArr = brd->layout; 
+bool inCheck(board_td* brd) { 
 
-    //find the king of the colour we want 
+    //find the king of the current player  
     int kingInd = 0;
-    while (pieceArr[kingInd]->colour != colour || pieceArr[kingInd]->type != 'g') {
+    while (brd->layout[kingInd]->colour != brd->turn || brd->layout[kingInd]->type != 'g') {
         kingInd++;
+    }
+
+    if (kingInd == brd->numPieces) {
+        printf("no friendly king found -- problem at inCheck()");
+        return false;
     }
 
     //go through every piece on the board 
     for (int i = 0; i < brd->numPieces; i++) {
         
         //ignore pieces of the same colour as the friendly king
-        if (pieceArr[i]->colour == colour) {
+        if (brd->layout[i]->colour == brd->turn) {
             continue;
         } else {
             
             //go through this (enemy) piece's every legal move
             int moveInd = 0;
-            while (pieceArr[i]->moves[moveInd]->row != 0) {
+            while (brd->layout[i]->moves[moveInd]->row != 0) {
                 
-                //if one of its legal moves is the square on which the king sits, return true
-                if (pieceArr[i]->moves[moveInd]->row == pieceArr[kingInd]->pos->row && pieceArr[i]->moves[moveInd]->col == pieceArr[kingInd]->pos->col) {
+                //if one of its legal moves is the square on which the king sits, return true 
+                if (equalSq(brd->layout[i]->moves[moveInd], brd->layout[kingInd]->pos)) {
                     return true;
                 }
 
@@ -303,16 +308,22 @@ bool inCheck(board_td* brd, char colour) {
 }
 
 //check whether the given colour is in checkmate 
-bool inCheckMate(board_td* brd, char colour) {
+bool inCheckMate(board_td* brd) {
     /*NOTE: I'm assuming that the legal moves attached to each piece on brd are 
     good and reliable as they come in*/
 
+    /*//get the enemy colour 
+    char enemyColour = 'b';
+    if (brd->turn == 'b') {
+        enemyColour = 'w';
+    }*/
+
     //make sure we're actually in check first lmao
-    if (inCheck(brd, colour)) {
+    if (inCheck(brd)) {
         
         //create a hypothetical board to work on 
         board_td* hypo = copyBoard(brd);
-        
+
         //for every friendly piece on the board
         for (int i = 0; i < hypo->numPieces; i++) {
             
@@ -320,26 +331,27 @@ bool inCheckMate(board_td* brd, char colour) {
             piece_td* currPiece = hypo->layout[i];
 
             //continue; if the current piece is unfriendly 
-            if (currPiece->colour != colour) {
+            if (currPiece->colour != brd->turn) {
                 continue;
             }
 
             //for every move that this piece can do...
             int moveInd = 0;
             while (currPiece->moves[moveInd]->row != 0) {
-                
+
                 //do it and then see if we're no longer in check 
                 movePiece(hypo, i, moveInd);
+                generateMoves(hypo, true);
 
                 //if we did a move and are no longer in check, free the hypo board and return false 
-                if (!inCheck(hypo, colour)) {
+                if (!inCheck(hypo)) {
                     freeBoard(hypo);
                     return false;
                 }
 
                 //if we get here, we didn't get out of check by making that move, so let's reset the hypo board 
-                softCopyBoard(hypo, brd);
-                generateMoves(hypo);
+                softCopyBoard(hypo, brd); 
+                //generateMoves(hypo);
 
                 moveInd++;
             }
@@ -385,12 +397,16 @@ void movePiece(board_td* brd, int pieceInd, int moveInd) {
     brd->layout[pieceInd]->pos->row = landPos->row;
     brd->layout[pieceInd]->pos->col = landPos->col;  
 
-    generateMoves(brd);
+    
+    
+    //generateMoves(brd);
 }
 
 //gernerate all legal moves for all pieces on brd, placing them in the "moves" field of the piece_td structs
-void generateMoves(board_td* brd) {
-    
+void generateMoves(board_td* brd, bool runChk) {
+
+    board_td* hypo = copyBoard(brd);
+
     //traverse every piece on the board 
     for (int i = 0; i < 32; i++) { 
 
@@ -401,7 +417,7 @@ void generateMoves(board_td* brd) {
         if (currPiece != NULL) { 
             
             //clear out the list of legals 
-            for (int j = 0; j < 30; j++) {
+            for (int j = 0; j < NUM_MOVES; j++) {
                 currPiece->moves[j]->row = 0;
                 currPiece->moves[j]->col = 0; 
             } 
@@ -453,7 +469,7 @@ void generateMoves(board_td* brd) {
                     advancePos->row -= 1 * blackOffset;
 
                     //if the square one square up isn't occupied 
-                    if (!occupant(brd, advancePos)) { 
+                    if (occupant(brd, advancePos) == NULL) { 
                         //add the current position advanced by two squares to legals
                         currPiece->moves[movesAdded] = copySq(advancePos); 
                         //increment the legals 
@@ -660,7 +676,7 @@ void generateMoves(board_td* brd) {
                             advancePos->col = currPiece->pos->col + j;
 
                             //if advancePos is unoccupied or occupied by an enemy
-                            if (occupant(brd, advancePos) == NULL || occupant(brd, advancePos)->colour != currPiece->colour) {
+                            if ((advancePos->row >= 1 && advancePos->row <= 8 && advancePos->col >= 'a' && advancePos->col <= 'h') && (occupant(brd, advancePos) == NULL || occupant(brd, advancePos)->colour != currPiece->colour)) {
                                 //add the current position to the list of legal moves
                                 currPiece->moves[movesAdded] = copySq(advancePos);
                                 movesAdded++;
@@ -675,25 +691,145 @@ void generateMoves(board_td* brd) {
                     break;
             }
 
-            //free the temp variable from earlier 
+            /*if (i == 9) {
+                printf("i = 9");
+            }*/
+            
+            //if a colour is in check, moves that don't resolve it are disallowed 
+            //if we're on a side that's in check, for all the real moves in the list of legal moves 
+            if (runChk && (inCheck(brd))) {
+                
+                //initialise an array to hold indices of good moves 
+                int resolvers[NUM_MOVES]; 
+                for (int j = 0; j < NUM_MOVES; j++) {
+                    resolvers[j] = -1;
+                }
+                int resIndex = 0;
+
+                for (int j = 0; currPiece->moves[j]->row != 0; j++) {
+                    
+                    //do move currPiece->moves[j] 
+                    movePiece(hypo, i, j);
+                    generateMoves(hypo, false);
+
+                    //if check is resolved, remove it from the list 
+                    if (!inCheck(hypo)) {
+                        
+                        //add this index to the list of moves that resolve check
+                        resolvers[resIndex] = j;
+                        resIndex++;
+                    }
+
+                    //reset hypo
+                    softCopyBoard(hypo, brd);
+                } 
+
+                for (int j = 0; j < NUM_MOVES; j++) {
+                    if (j < resIndex) {
+                        currPiece->moves[j]->row = currPiece->moves[resolvers[j]]->row;
+                        currPiece->moves[j]->col = currPiece->moves[resolvers[j]]->col;
+                    } else {
+                        currPiece->moves[j]->row = 0;
+                        currPiece->moves[j]->col = 0;
+                    }
+                }
+            } 
+
+            //free the temp variables from earlier 
             free(advancePos);
         }
     }
+
+    freeBoard(hypo);
 }
 
 //run one layer of the simulation
-move_td* simulate(board_td* brd, char colour, int depth) {
+move_td* simulate(board_td* brd, int depth) {
     //generate the legal moves for all the pieces on the board 
-    generateMoves(brd);
+    generateMoves(brd, true);
 
     if (depth == 1) {
-        //base case 
+        //base case
+        
+        //create a move to store the best move 
+        move_td* best = malloc(sizeof(move_td));
+        best->score = INT_MIN;
+
+        //create a hypothetical board to work on 
+        board_td* hypo = copyBoard(brd);
+
+        //for every friendly piece
+        for (int i = 0; i < brd->numPieces; i++) {
+            //shortcut to the current piece
+            piece_td* currPiece = brd->layout[i];
+
+            if (currPiece->colour == brd->turn) {
+                
+                //shortcut to the current move
+                square_td* currMove = currPiece->moves[0];
+                
+                //for every move
+                int j = 0;
+                while (currMove->row != 0) {
+                    
+                    //update the shortcut 
+                    currMove = currPiece->moves[j];
+
+                    //make the move 
+                    movePiece(hypo, i, j);
+                    generateMoves(hypo, true);
+
+                    //get the score 
+                    int score = getScore(hypo);
+
+                    //save the best 
+                    if (score >= best->score) {
+                        best->score = score;
+                        best->pieceInd = i;
+                        best->moveInd = j;
+                    }
+
+                    //clean up hypo 
+                    softCopyBoard(hypo, brd);
+
+                    j++;
+                }
+
+            }
+
+        }
+
+        return best;
 
     } else {
+
         //recursive case 
 
-    }
+        //create a hypothetical board to work on 
+        board_td* hypo = copyBoard(brd);
 
+        //get the enemy colour 
+        char enemyColour = 'b';
+        if (brd->turn == 'b') {
+            enemyColour = 'w';
+        }
+
+        //recurse out to the next layer of simulation for the enemy 
+        move_td* bestEnemy = simulate(hypo, depth - 1);
+
+        //make the best move the enemy can do
+        movePiece(hypo, bestEnemy->pieceInd, bestEnemy->moveInd);
+        generateMoves(hypo, true);    
+
+        //recurse out to the next layer of simulation for our pieces 
+        move_td* bestFriendly = simulate(hypo, depth - 1);
+        
+        //free temporary moves and boards
+        free(bestEnemy);
+        freeBoard(hypo);
+        
+        return bestFriendly;
+    }
     
     return NULL;
 }
@@ -822,8 +958,9 @@ board_td* readBoard(char* name) {
 
             //read in the piece 
             char pieceIn = *inputTraverse;
+
+            //skip the empty squares and line breaks
             if (pieceIn != '.' && pieceIn != '\n') {
-                //skip the empty squares and line breaks
             
                 //we've hit a piece 
                 brd->numPieces++;
