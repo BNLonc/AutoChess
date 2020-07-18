@@ -33,6 +33,8 @@ void freeBoard(board_td* brd) {
     free(brd->layout);
 
     free(brd);
+
+    brd = NULL;
 }
 
 //constructor for pieces
@@ -54,13 +56,15 @@ piece_td* newPiece() {
 void freePiece(piece_td* piece) {
     free(piece->pos);
 
-        for (int j = 0; j < NUM_MOVES; j++) {
-            free(piece->moves[j]);
-        }
+    for (int j = 0; j < NUM_MOVES; j++) {
+        free(piece->moves[j]);
+    }
 
-        free(piece->moves);
+    free(piece->moves);
 
-        free(piece);
+    free(piece);
+
+    piece = NULL;
 }
 
 //copy the square struct orig and return a pointer to a deep copy 
@@ -126,7 +130,7 @@ int main() {
     sq->col = 'b';
     square_td* copyTest = copySq(sq);
     bool equal = equalSq(sq, sq2);
-    bool equal = equalSq(sq, copyTest);
+    bool equal2 = equalSq(sq, copyTest);
 
     free(sq);
     free(sq2);
