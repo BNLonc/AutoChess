@@ -24,7 +24,7 @@ struct board {
     piece_td** layout;
     int numPieces; //the number of pieces on the board 
     char turn; 
-    //int score;
+    char check; //code for who is in check: w for white, b for black, n for nobody 
 } typedef board_td;
 
 //define the smallest int value
@@ -73,23 +73,26 @@ piece_td* occupant(board_td*, square_td*); //KTBW
 int getScore(board_td*); //KTBW
 
 //make a deep copy of a board 
-board_td* copyBoard(board_td*); 
+board_td* copyBoard(board_td*); //KTBW
 
 //soft-copy a board
-void softCopyBoard(board_td*, board_td*);
+void softCopyBoard(board_td**, board_td*); //KTBW
 
 //check whether the current colour is in check 
-bool inCheck(board_td*); 
+bool inCheck(board_td*); //-------------
 
 //check whether the current colour is in checkmate
-bool inCheckMate(board_td*); 
+bool inCheckMate(board_td*); //-------------
 
 //move a piece from ci, ri to cf, rf on board brd 
-void movePiece(board_td*, int, int); //problem
+void movePiece(board_td*, int, int); //problem-------------
 
-void generateMoves(board_td*, bool); //problem
+void generateMoves(board_td*, bool); //problem-------------
 
-move_td* simulate(board_td*, int); //problem
+move_td* simulate(board_td*, int); //problem-------------
+
+//constructor for moves 
+move_td* newMove();
 
 void setInit(board_td*); //KTBW
 
@@ -98,3 +101,6 @@ void printBoard(board_td*); //KTBW
 void writeBoard(board_td*, char*); //KTBW
 
 board_td* readBoard(char*); //KTBW
+
+//print a board as it is in memory 
+void dumpBoard(board_td* brd); //KTBW
