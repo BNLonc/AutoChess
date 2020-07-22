@@ -85,8 +85,10 @@ piece_td* occupant(board_td* brd, square_td* sq) {
     //hold a pointer to the current piece 
     piece_td* currPiece;
 
+    int numPc = brd->numPieces;
+
     //traverse all pieces
-    for (int i = 0; i < 32; i++) {  
+    for (int i = 0; i < numPc; i++) {  
         //assign the pointer to the current piece 
         currPiece = brd->layout[i];
         
@@ -159,7 +161,23 @@ int main() {
         printf("not checkmate\n");
     }
 
-    printf("Score for %c is: %i\n", readIn->turn, getScore(readIn));
+    move_td* best1 = simulate(readIn, 1);
+    printf("Best move for %c at depth 1 is: ", readIn->turn);
+    printMove(readIn, best1);
+
+    move_td* best2 = simulate(readIn, 2);
+    printf("Best move for %c at depth 2 is: ", readIn->turn);
+    printMove(readIn, best2);
+
+    move_td* best3 = simulate(readIn, 3);
+    printf("Best move for %c at depth 3 is: ", readIn->turn);
+    printMove(readIn, best3);
+
+    writeBoard(readIn, "brdOut.txt");
+
+    free(best1);
+    free(best2);
+    free(best3);
 
     freeBoard(readIn);
 
@@ -172,47 +190,71 @@ int getScore(board_td* brd) {
     //variable to hold the score to output
     int scoreOut = 0; 
 
+    //save the enemy colour 
+    char enemyColour = 'b';
+    if (brd->turn == 'b') {
+        enemyColour = 'w';
+    }
+
     //return a crazy low value if we're in checkmate     
     if (inCheckMate(brd)) {
         return -6942069;
     }
+
+    //check whether the enemy is in checkmate 
+    char savedTurn = brd->turn;
+    brd->turn = enemyColour;
+    if (inCheckMate(brd)) {
+        return 6942069;
+    }
+    brd->turn = savedTurn;
     
     //check about being in check
     if (brd->check == brd->turn) {
         scoreOut -= QUEE_VAL * 2;
+    } else if (brd->check == enemyColour) {
+        scoreOut += QUEE_VAL * 2;
     }
 
     piece_td* currPiece = NULL; 
 
     //traverse all the pieces 
     for (int i = 0; i < brd->numPieces; i++) {
+        
+        //set up a shortcut
         currPiece = brd->layout[i];
 
-        //add the piece into the score if it's friendly 
-        if (currPiece->colour == brd->turn) {
-            switch (currPiece->type) {
-                case 'p':
-                    scoreOut += PAWN_VAL;
-                    break;
-                case 'r':
-                    scoreOut += ROOK_VAL;
-                    break;
-                case 'n':
-                    scoreOut += KNIG_VAL;
-                    break;
-                case 'b':
-                    scoreOut += BISH_VAL;
-                    break;
-                case 'q':
-                    scoreOut += QUEE_VAL;
-                    break;
-                case 'k':
-                    break;
-                default: 
-                    printf("u dun goofed piece type flags\n");
-            }
+        //temporary variable to hold the score we're going to add for this piece
+        int scoreAdd = 0;
 
+        switch (currPiece->type) {
+            case 'p':
+                scoreAdd += PAWN_VAL;
+                break;
+            case 'r':
+                scoreAdd += ROOK_VAL;
+                break;
+            case 'n':
+                scoreAdd += KNIG_VAL;
+                break;
+            case 'b':
+                scoreAdd += BISH_VAL;
+                break;
+            case 'q':
+                scoreAdd += QUEE_VAL;
+                break;
+            case 'k':
+                break;
+            default: 
+                printf("u dun goofed piece type flags\n");
         }
+
+        //set the score to add as positive or negative depending on the colour 
+        if (currPiece->colour == enemyColour) {
+            scoreAdd *= -1;
+        }
+
+        scoreOut += scoreAdd;
 
     }
 
@@ -234,12 +276,18 @@ board_td* copyBoard(board_td* orig) {
     //copy the pieces in the layout array 
     int i = 0;
     while (i < newBrd->numPieces) {
+
+        //set up shortcuts 
         piece_td* newPiece = newBrd->layout[i];
         piece_td* origPiece = orig->layout[i];
 
-        free(newPiece->pos);
+        //free(newPiece->pos);
 
-        newPiece->pos = copySq(origPiece->pos);
+        //newPiece->pos = copySq(origPiece->pos);
+
+        newPiece->pos->row = origPiece->pos->row;
+        newPiece->pos->col = origPiece->pos->col;
+
         newPiece->type = origPiece->type;
         newPiece->colour = origPiece->colour;
         
@@ -421,7 +469,7 @@ void movePiece(board_td* brd, int pieceInd, int moveInd) {
     //point to the piece we're going to land on when we move 
     square_td* landPos = brd->layout[pieceInd]->moves[moveInd];
 
-    //go through the pieces 
+    //go through the pieces to find the index of the piece we're going to capture  
     int capInd = 0;
     while (capInd < brd->numPieces) {
         
@@ -447,6 +495,11 @@ void movePiece(board_td* brd, int pieceInd, int moveInd) {
         brd->layout[capInd] = brd->layout[brd->numPieces - 1];
         brd->layout[brd->numPieces - 1] = NULL;
         brd->numPieces--;
+
+        //check whether we were working on the last piece in the array (that just got moved elsewhere) 
+        if (pieceInd == brd->numPieces) {
+            pieceInd = capInd;
+        }
     }
 
     piece_td* currPiece = brd->layout[pieceInd]; 
@@ -893,6 +946,13 @@ void generateMoves(board_td* brd, bool doChk) {
 
 //run one layer of the simulation
 move_td* simulate(board_td* brd, int depth) {
+    
+    printf("Running depth");
+    for (int i = 0; i < depth; i++) {
+        printf(" ");
+    }
+    printf("%i\n", depth);
+
     //generate the legal moves for all the pieces on the board 
     generateMoves(brd, true);
 
@@ -904,6 +964,7 @@ move_td* simulate(board_td* brd, int depth) {
         
         //create a move to store the best move 
         move_td* best = newMove();
+        best->score = INT_MAX;
 
         //for every piece
         for (int i = 0; i < brd->numPieces; i++) {
@@ -924,11 +985,14 @@ move_td* simulate(board_td* brd, int depth) {
                     movePiece(hypo, i, j);
                     generateMoves(hypo, true);
 
-                    //get the score 
+                    //get the enemy's resulting score 
                     int score = getScore(hypo);
 
-                    //save the best 
-                    if (score >= best->score) {
+                    //debug
+                    //printf("Running simulation depth 1: piece %i, move %i, got score %i\n", i, j, score);
+
+                    //save the best for us (worst for them)
+                    if (score <= best->score) {
                         best->score = score;
                         best->pieceInd = i;
                         best->moveInd = j;
@@ -938,6 +1002,8 @@ move_td* simulate(board_td* brd, int depth) {
             }
 
         }
+
+        freeBoard(hypo);
 
         return best;
 
@@ -968,12 +1034,27 @@ move_td* simulate(board_td* brd, int depth) {
                     movePiece(hypo, i, j);
                     generateMoves(hypo, true);
 
-                    //get the enemy's best response  
-                    move_td* enemyBest = simulate(hypo, depth - 1);
-                    
-                    //make the enemy's response 
-                    movePiece(hypo, enemyBest->pieceInd, enemyBest->moveInd);
-                    generateMoves(hypo, true);
+                    //if we didn't put the enemy in checkmate
+                    if (!inCheckMate(brd)) {
+
+                        //get the enemy's best response  
+                        move_td* enemyBest = simulate(hypo, depth - 1);
+                        
+                        //make the enemy's response 
+                        movePiece(hypo, enemyBest->pieceInd, enemyBest->moveInd);
+                        generateMoves(hypo, true);
+
+                        free(enemyBest);
+
+                    } else {
+                        
+                        //just cycle the turns if we put the enemy in checkmate 
+                        if (hypo->turn == 'w') {
+                            hypo->turn = 'b';
+                        } else {
+                            hypo->turn = 'w';
+                        }
+                    }
 
                     //get the score for me 
                     int finalScore = getScore(hypo);
@@ -984,9 +1065,12 @@ move_td* simulate(board_td* brd, int depth) {
                         bestMove->pieceInd = i;
                         bestMove->moveInd = j;
                     }
+
                 }
             }
         }
+
+        freeBoard(hypo);
 
         return bestMove;
 
@@ -1029,6 +1113,8 @@ move_td* newMove() {
     mv->score = INT_MIN;
     mv->pieceInd = -1;
     mv->moveInd = -1;
+
+    return mv;
 }
 
 //set up a default board
@@ -1083,14 +1169,14 @@ void setInit(board_td* brd) {
         //set up queens
         currPiece = brd->layout[14 + offset];
         currPiece->pos->col = 'd';
-        currPiece->pos->row = currPiece->pos->row = (offset == 16)? 8 : 1;
+        currPiece->pos->row = (offset == 16)? 8 : 1;
         currPiece->colour = (offset == 16)? 'b' : 'w';
         currPiece->type = 'q';
 
         //set up kings
         currPiece = brd->layout[15 + offset];
         currPiece->pos->col = 'e';
-        currPiece->pos->row = currPiece->pos->row = (offset == 16)? 8 : 1;
+        currPiece->pos->row = (offset == 16)? 8 : 1;
         currPiece->colour = (offset == 16)? 'b' : 'w';
         currPiece->type = 'k';
     }
@@ -1154,7 +1240,11 @@ board_td* readBoard(char* name) {
     char* input = malloc(sizeof(char) * 74);
     char* inputTraverse = input;
 
-    fread(input, sizeof(char), 74, fp);
+    int read = fread(input, sizeof(char), 74, fp);
+
+    if (read != 73) {
+        printf("you goofed reading, you read %i", read);
+    }
 
     //close the file we're reading in 
     fclose(fp);
@@ -1227,4 +1317,12 @@ void dumpBoard(board_td* brd) {
         }
     }
 
+}
+
+//print a move 
+void printMove(board_td* brd, move_td* mv) {
+    piece_td* thisPiece = brd->layout[mv->pieceInd];
+    square_td* thisMove = thisPiece->moves[mv->moveInd];
+    
+    printf("%c %c at %c%i to %c%i\n", thisPiece->colour, thisPiece->type, thisPiece->pos->col, thisPiece->pos->row, thisMove->col, thisMove->row);
 }

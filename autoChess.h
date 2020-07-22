@@ -30,6 +30,9 @@ struct board {
 //define the smallest int value
 #define INT_MIN -2147483648
 
+//define the largest int value
+#define INT_MAX 2147483647
+
 //the depth we want to make the simulation of future steps max out to
 #define SIM_DEPTH 4
 
@@ -104,3 +107,6 @@ board_td* readBoard(char*); //KTBW
 
 //print a board as it is in memory 
 void dumpBoard(board_td* brd); //KTBW
+
+//print a move 
+void printMove(board_td*, move_td*);
