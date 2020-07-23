@@ -10,6 +10,9 @@
 //the number of legal moves a piece can have 
 #define NUM_MOVES 30
 
+//the number of pieces boards should hold 
+#define NUM_PIECES 32
+
 //a struct to hold a move 
 struct move {
     int pieceInd;
@@ -33,7 +36,7 @@ struct piece {
 
 //a struct to represent chess boards
 struct board {
-    piece_td** layout;
+    piece_td* layout[NUM_PIECES];
     int numPieces; //the number of pieces on the board 
     char turn; 
     char check; //code for who is in check: w for white, b for black, n for nobody 

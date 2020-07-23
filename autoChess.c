@@ -8,9 +8,7 @@
 board_td* newBoard() {
     board_td* newBrd = malloc(sizeof(board_td));
 
-    newBrd->layout = malloc(sizeof(piece_td*) * 32);
-
-    for (int i = 0; i < 32; i++) {
+    for (int i = 0; i < NUM_PIECES; i++) {
         newBrd->layout[i] = newPiece();
     }
 
@@ -29,8 +27,6 @@ void freeBoard(board_td* brd) {
             free(brd->layout[i]);
         }
     }
-
-    free(brd->layout);
 
     free(brd);
 }
@@ -160,11 +156,16 @@ int main() {
     printf("Best move for %c at depth 3 is: ", readIn->turn);
     printMove(readIn, best3);
 
+    move_td* best4 = simulate(readIn, SIM_DEPTH);
+    printf("Best move for %c at full depth is: ", readIn->turn);
+    printMove(readIn, best4);
+
     writeBoard(readIn, "brdOut.txt");
 
     free(best1);
     free(best2);
     free(best3);
+    free(best4);
 
     /*board_td* readOther = readBoard("clean.txt");
 
