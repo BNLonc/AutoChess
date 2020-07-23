@@ -1,3 +1,15 @@
+//define the smallest int value
+#define INT_MIN -2147483648
+
+//define the largest int value
+#define INT_MAX 2147483647
+
+//the depth we want to make the simulation of future steps max out to
+#define SIM_DEPTH 4
+
+//the number of legal moves a piece can have 
+#define NUM_MOVES 30
+
 //a struct to hold a move 
 struct move {
     int pieceInd;
@@ -15,8 +27,8 @@ struct square {
 struct piece {
     char type;
     char colour;
-    square_td* pos;
-    square_td** moves;
+    square_td pos;
+    square_td moves[NUM_MOVES];
 } typedef piece_td;
 
 //a struct to represent chess boards
@@ -26,18 +38,6 @@ struct board {
     char turn; 
     char check; //code for who is in check: w for white, b for black, n for nobody 
 } typedef board_td;
-
-//define the smallest int value
-#define INT_MIN -2147483648
-
-//define the largest int value
-#define INT_MAX 2147483647
-
-//the depth we want to make the simulation of future steps max out to
-#define SIM_DEPTH 4
-
-//the number of legal moves a piece can have 
-#define NUM_MOVES 30
 
 //constants for piece values
 #define PAWN_VAL 1
@@ -49,37 +49,35 @@ struct board {
 //allow bool (boolean) variables 
 typedef enum {false, true} bool; 
 
-//KTBW = KNOWN TO BE WORKING 
-
 //allocate and return a pointer to a new board struct in memory
-board_td* newBoard(); //KTBW
+board_td* newBoard();  
 
 //deallocate a board and its contents completely 
-void freeBoard(board_td*); //KTBW
+void freeBoard(board_td*);  
 
 //constructor for pieces
-piece_td* newPiece(); //KTBW
+piece_td* newPiece();  
 
 //destructor for pieces
-void freePiece(piece_td*); //KTBW
+void freePiece(piece_td*);  
 
 //copy the square struct orig and return a pointer to a deep copy 
-square_td* copySq(square_td*); //KTBW
+void copySq(square_td*, square_td);  
 
 //check if two square structs are the same 
-bool equalSq(square_td*, square_td*); //KTBW
+bool equalSq(square_td*, square_td*);  
 
 //check if square sq on board brd is occupied, returning a pointer to the occupying piece if so
-piece_td* occupant(board_td*, square_td*); //KTBW
+piece_td* occupant(board_td*, square_td*);  
 
 //get the score for board_td struct for a given colour 
-int getScore(board_td*); //KTBW
+int getScore(board_td*);  
 
 //make a deep copy of a board 
-board_td* copyBoard(board_td*); //KTBW
+board_td* copyBoard(board_td*);  
 
 //soft-copy a board
-void softCopyBoard(board_td**, board_td*); //KTBW
+void softCopyBoard(board_td**, board_td*);  
 
 //check whether the current colour is in check 
 bool inCheck(board_td*); //-------------
@@ -97,16 +95,16 @@ move_td* simulate(board_td*, int); //problem-------------
 //constructor for moves 
 move_td* newMove();
 
-void setInit(board_td*); //KTBW
+void setInit(board_td*);  
 
-void printBoard(board_td*); //KTBW
+void printBoard(board_td*);  
 
-void writeBoard(board_td*, char*); //KTBW
+void writeBoard(board_td*, char*);  
 
-board_td* readBoard(char*); //KTBW
+board_td* readBoard(char*);  
 
 //print a board as it is in memory 
-void dumpBoard(board_td* brd); //KTBW
+void dumpBoard(board_td* brd);  
 
 //print a move 
 void printMove(board_td*, move_td*);
