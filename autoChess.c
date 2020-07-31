@@ -52,47 +52,10 @@ int occupant(board_td* brd, square_td sq) {
     return -1;
 }
 
-//mian function 
+//main function 
 int main() {
-    //TIMING
-    time_t st = clock();
 
-    //FIRST-ORDER FUNCTIONS 
-    /*piece_td* testPiece = newPiece();
-    
-    testPiece->colour = 'b';
-    testPiece->pos.row = 5;
-    testPiece->pos.col = 'e';
-    testPiece->type = 'n';
-
-    for (int i = 0; i < NUM_MOVES; ++i) {
-        testPiece->moves[i].row = NUM_MOVES - i;
-        testPiece->moves[i].col = NUM_MOVES - i + 'a';
-    }
-
-    free(testPiece);
-
-    square_td sq;
-    sq.row = 5;
-    sq.col = 'e';
-    square_td otherSq;
-    otherSq.row = 6;
-    otherSq.col = 'b';
-    
-    copySq(&otherSq, sq);
-
-    if (equalSq(&sq, &otherSq)) {
-        printf("equal");
-    } else {
-        printf("not equal");
-    }*/
-    
-
-
-    //SECOND-ORDER FUNCTIONS
-    
-
-    board_td* readIn = readBoard("brdTst.txt");
+    /*board_td* readIn = readBoard("brdTst.txt");
     //setInit(readIn);
 
     generateMoves(readIn, true);
@@ -109,46 +72,194 @@ int main() {
         printf("not checkmate\n");
     }
 
-    /*move_td* best1 = simulate(readIn, 1);
-    printf("Best move for %c at depth 1 is: ", readIn->turn);
-    printMove(readIn, best1);
-
-    move_td* best2 = simulate(readIn, 2);
-    printf("Best move for %c at depth 2 is: ", readIn->turn);
-    printMove(readIn, best2);
-
-    move_td* best3 = simulate(readIn, 3);
-    printf("Best move for %c at depth 3 is: ", readIn->turn);
-    printMove(readIn, best3);*/
-
     move_td* best4 = simulate(readIn, SIM_DEPTH);
     printf("Best move for %c at full depth is: ", readIn->turn);
     printMove(readIn, best4);
 
     writeBoard(readIn, "brdOut.txt");
 
-    /*free(best1);
+    free(best1);
     free(best2);
-    free(best3);*/
+    free(best3);
     free(best4);
 
-    free(readIn);
-
-    //TIMING
-    st = clock() - st;
-
-    double time_taken = ((double)st)/CLOCKS_PER_SEC;
-
-    printf("Total time of execution: %f\n", time_taken);
+    free(readIn);*/
     
+    runPlay();
+
     return 0;
+}
+
+//the frontend loop for playing against the bot 
+void runPlay() {
+
+    char input;
+
+    board_td* brd = newBoard();
+    setInit(brd);
+    generateMoves(brd, true);
+
+    char* result;
+
+    do {
+        //system("clear");
+        printBoard(brd);
+
+        //debug
+        dumpBoard(brd);
+        
+        printf("Enter command to (q)uit, (r)estart, (s)ave game, (l)oad game, or (m)ake a move: ");
+        input = getchar();
+
+        //grab the extra newline character left behind 
+        getchar();
+
+        char fileName[STR_LEN];
+
+        switch (input) {
+            case 'q':
+
+                system("clear");
+
+                break;
+
+            case 'r':
+                setInit(brd);
+                generateMoves(brd, true);
+                break;
+
+            case 's':
+                printf("Enter the name you want to use for your save file: ");
+                result = fgets(fileName, STR_LEN, stdin);
+
+                trimNewline(fileName);
+
+                writeBoard(brd, fileName);
+
+                break;
+
+            case 'l':
+                
+                free(brd);
+
+                do {
+
+                    if (brd == NULL) {
+                        printf("Save file not found\n");
+                    }
+                    
+                    printf("Enter the name of your save file: ");
+                    result = fgets(fileName, STR_LEN, stdin);
+                    trimNewline(fileName);
+
+                    brd = readBoard(fileName);
+
+                } while (brd == NULL);
+
+                generateMoves(brd, true);
+
+                break;
+            
+            case 'm':
+
+                printf("What is the location of the piece you'd like to move? ");
+                char location[STR_LEN];
+                result = fgets(location, STR_LEN, stdin);
+
+                square_td locationSq;
+                locationSq.col = location[0];
+                locationSq.row = ((int)location[1]) - 48;
+
+                int index = occupant(brd, locationSq);
+
+                //if we're trying to move off a bad location
+                if (index == -1 || brd->layout[index].colour != 'w') {
+
+                    printf("Invaid piece - press ENTER to continue\n");
+                    getchar();
+
+                } else {
+                    //the location is good 
+
+                    printf("Where do you want to move this piece? ");
+                    char destination[STR_LEN];
+                    result = fgets(destination, STR_LEN, stdin);
+
+                    square_td destinationSq;
+                    destinationSq.col = destination[0];
+                    destinationSq.row = ((int)destination[1]) - 48;
+
+                    piece_td currPiece = brd->layout[index];
+
+                    int moveIndex = 0;
+                    while (currPiece.moves[moveIndex].row != 0) {
+                        
+                        if (equalSq(currPiece.moves[moveIndex], destinationSq)) {
+                            break;
+                        }
+                        
+                        ++moveIndex;
+                    }
+
+                    if (currPiece.moves[moveIndex].row == 0) {
+                        
+                        printf("Invalid move - press ENTER to continue\n");
+                        getchar();
+                        
+                        break;
+
+                    } else {
+                        //the move is good 
+
+                        movePiece(brd, index, moveIndex);
+                        generateMoves(brd, true);
+
+                        if (inCheckMate(brd)) {
+                            printf("White wins!");
+                            exit(0);
+                        }
+
+                        move_td* blackMove = simulate(brd, SIM_DEPTH);
+
+                        movePiece(brd, blackMove->pieceInd, blackMove->moveInd);
+                        generateMoves(brd, true);
+
+                        if (inCheckMate(brd)) {
+                            printf("Black wins!");
+                            exit(0);
+                        }
+
+                        //printBoard(brd);
+                    }
+
+                }
+
+                break;
+            
+            default:
+                printf("Command unrecognised; try again\n");
+        }
+
+    } while (input != 'q');
+
+}
+
+//trim the '\n' off the end of the given string
+void trimNewline(char* string) {
+    int i = 0;
+    while (string[i] != '\n') {
+        i++;
+    }
+    string[i] = 0;
 }
 
 //get the score for board_td struct for a given colour 
 int getScore(board_td* brd) {
 
-    //variable to hold the score to output
-    int scoreOut = 0; 
+    //return a crazy low value if we're in checkmate     
+    if (inCheckMate(brd)) {
+        return INT_MIN;
+    }
 
     //shortcut to turn 
     char turn = brd->turn;
@@ -159,21 +270,19 @@ int getScore(board_td* brd) {
         enemyColour = 'w';
     }
 
-    //return a crazy low value if we're in checkmate     
-    if (inCheckMate(brd)) {
-        return -6942069;
-    }
-
     //check whether the enemy is in checkmate 
     char savedTurn = turn;
     brd->turn = enemyColour;
     if (inCheckMate(brd)) {
-        return 6942069;
+        return INT_MAX;
     }
     brd->turn = savedTurn;
     
     //shortcut to check
     char check = brd->check;
+
+    //variable to hold the score to output
+    int scoreOut = 0; 
 
     //check about being in check
     if (check == turn) {
@@ -212,6 +321,51 @@ int getScore(board_td* brd) {
                 break;
             default: 
                 printf("u dun goofed piece type flags\n");
+        }
+
+        //store the bonus we're giving this piece for being in or covering the centre
+        int centreBonus = 0;
+        int coverageBonus = 0;
+
+        //check if the piece occupies the centre 
+        if (/*layout[i].pos.row <= 6 && layout[i].pos.row >= 3 && layout[i].pos.col <= 'f' && layout[i].pos.col >= 'c'*/(layout[i].pos.row == 4 || layout[i].pos.row == 5) && (layout[i].pos.col == 'd' || layout[i].pos.col == 'e')) {
+            
+            //use bit-shifts to add scoreAdd * 1/(2^3) or scoreAdd * 1/16 to centreBonus
+            //centreBonus += scoreAdd >> 4;
+            
+            //give greater scores to pieces in the very centre four squares on the board
+            //if ((layout[i].pos.row == 4 || layout[i].pos.row == 5) && (layout[i].pos.col == 'd' || layout[i].pos.col == 'e')) {
+                
+                //use bit-shifts to add scoreAdd * 1/(2^4) or scoreAdd * 1/8 to centreBonus
+                centreBonus += scoreAdd >> 3;
+            //}
+
+        } else {
+            //do a bonus for pieces that cover the centre 
+
+            //traverse the piece's moves 
+            for (int j = 0; layout[i].moves[j].row != 0; j++) {
+                
+                //give greater scores to pieces covering the very centre four squares on the board
+                if ((layout[i].moves[j].row == 4 || layout[i].moves[j].row == 5) && (layout[i].moves[j].col == 'd' || layout[i].moves[j].col == 'e')) {
+                    
+                    //use bit-shifts to add scoreAdd * 1/(2^5) or scoreAdd * 1/32 to centreBonus
+                    coverageBonus += scoreAdd >> 5;
+                }    
+            }
+
+            
+        }
+
+        //add in the larger  bonus
+        if (centreBonus > coverageBonus) {
+            scoreAdd += centreBonus;
+        } else {
+            scoreAdd += coverageBonus;
+        }  
+        
+        if (layout[i].hasMoved == false) {
+            scoreAdd = 3 * (scoreAdd >> 2); 
         }
 
         //set the score to add as positive or negative depending on the colour 
@@ -272,6 +426,8 @@ void softCopyBoard(board_td** recip, board_td* orig) {
             newLayout[i].moves[j].row = origLayout[i].moves[j].row;
             newLayout[i].moves[j].col = origLayout[i].moves[j].col;
         }
+
+        newLayout[i].hasMoved = origLayout[i].hasMoved;
 
         ++i;
     }
@@ -409,6 +565,9 @@ bool inCheckMate(board_td* brd) {
 //move a piece on board brd 
 void movePiece(board_td* brd, int pieceInd, int moveInd) {
     
+    //set the hasMoved  field
+    brd->layout[pieceInd].hasMoved = true;
+
     //point to the piece we're going to land on when we move 
     square_td landPos = brd->layout[pieceInd].moves[moveInd];
 
@@ -934,9 +1093,6 @@ move_td* simulate(board_td* brd, int depth) {
                     //get the enemy's resulting score 
                     int score = getScore(hypo);
 
-                    //debug
-                    //printf("-+=+- Running simulation depth 1: piece %i, move %i, got score %i\n", i, j, score);
-
                     //save the best for us (worst for them)
                     if (score <= best->score) {
                         best->score = score;
@@ -959,6 +1115,8 @@ move_td* simulate(board_td* brd, int depth) {
         //create a hypothetical board to work on 
         board_td* hypo = newBoard();
 
+        hypo->turn = turn;
+
         //store and set up the best move
         move_td* bestMove = newMove();
 
@@ -966,7 +1124,7 @@ move_td* simulate(board_td* brd, int depth) {
         for (int i = 0; i < numPieces; ++i) {
 
             //if we're about to look at a piece whose turn it is
-            if (layout[i].colour == hypo->turn) {
+            if (layout[i].colour == turn) {
 
                 //traverse all moves this piece has 
                 for (int j = 0; layout[i].moves[j].row != 0; ++j) {
@@ -974,6 +1132,12 @@ move_td* simulate(board_td* brd, int depth) {
                     //reset the hypothetical board to the original 
                     softCopyBoard(&hypo, brd);
 
+                    if (depth == 3 && i == 0 && j == 0) {
+                        //debug 
+                        printBoard(hypo);
+                        dumpBoard(hypo);
+                    }
+                    
                     //make the current move in the traversal 
                     movePiece(hypo, i, j);
                     generateMoves(hypo, true);
@@ -998,11 +1162,17 @@ move_td* simulate(board_td* brd, int depth) {
                         } else {
                             hypo->turn = 'w';
                         }
+
                     }
 
                     //get the score for me 
                     int finalScore = getScore(hypo);
-
+                    
+                    if (depth == 3) {
+                        //debug
+                        printf("-+=+- Running simulation depth 3: piece %i, move %i, got score %i\n", i, j, finalScore);
+                    }
+                    
                     //log it if it's the best
                     if (finalScore >= bestMove->score) {
                         bestMove->score = finalScore;
@@ -1067,55 +1237,59 @@ void setInit(board_td* brd) {
     brd->numPieces = NUM_PIECES;
     piece_td* layout = brd->layout;
 
-    for (int offset = 0; offset <= 16; offset = offset + 16) {
+    for (int offset = 0; offset <= 16; offset += 16) {
         
         //set up pawns 
         for (int i = 0; i < 8; ++i) {
-            layout[i].pos.col = i + 'a';
-            layout[i].pos.row = (offset == 16)? 7 : 2;
-            layout[i].colour = (offset == 16)? 'b' : 'w';
-            layout[i].type = 'p';
+            layout[i + offset].pos.col = i + 'a';
+            layout[i + offset].pos.row = (offset == 16)? 7 : 2;
+            layout[i + offset].colour = (offset == 16)? 'b' : 'w';
+            layout[i + offset].type = 'p';
         }
 
         //set up rooks 
         for (int i = 8; i <= 9; ++i) {
-            layout[i].pos.col = ((i == 8)? 1 : 8) + 'a' - 1;
-            layout[i].pos.row = (offset == 16)? 8 : 1;
-            layout[i].colour = (offset == 16)? 'b' : 'w';
-            layout[i].type = 'r';
+            layout[i + offset].pos.col = ((i == 8)? 1 : 8) + 'a' - 1;
+            layout[i + offset].pos.row = (offset == 16)? 8 : 1;
+            layout[i + offset].colour = (offset == 16)? 'b' : 'w';
+            layout[i + offset].type = 'r';
         }
 
         //set up knights
         for (int i = 10; i <= 11; ++i) {
-            layout[i].pos.col = ((i == 10)? 2 : 7) + 'a' - 1;
-            layout[i].pos.row = (offset == 16)? 8 : 1;
-            layout[i].colour = (offset == 16)? 'b' : 'w';
-            layout[i].type = 'n';
+            layout[i + offset].pos.col = ((i == 10)? 2 : 7) + 'a' - 1;
+            layout[i + offset].pos.row = (offset == 16)? 8 : 1;
+            layout[i + offset].colour = (offset == 16)? 'b' : 'w';
+            layout[i + offset].type = 'n';
         }
         
         //set up bishops
         for (int i = 12; i <= 13; ++i) {
-            layout[i].pos.col = ((i == 12)? 3 : 6) + 'a' - 1;
-            layout[i].pos.row = (offset == 16)? 8 : 1;
-            layout[i].colour = (offset == 16)? 'b' : 'w';
-            layout[i].type = 'b';
+            layout[i + offset].pos.col = ((i == 12)? 3 : 6) + 'a' - 1;
+            layout[i + offset].pos.row = (offset == 16)? 8 : 1;
+            layout[i + offset].colour = (offset == 16)? 'b' : 'w';
+            layout[i + offset].type = 'b';
         }
 
         int i = 14;
 
         //set up queens
-        layout[i].pos.col = 'd';
-        layout[i].pos.row = (offset == 16)? 8 : 1;
-        layout[i].colour = (offset == 16)? 'b' : 'w';
-        layout[i].type = 'q';
+        layout[i + offset].pos.col = 'd';
+        layout[i + offset].pos.row = (offset == 16)? 8 : 1;
+        layout[i + offset].colour = (offset == 16)? 'b' : 'w';
+        layout[i + offset].type = 'q';
 
         i = 15;
 
         //set up kings
-        layout[i].pos.col = 'e';
-        layout[i].pos.row = (offset == 16)? 8 : 1;
-        layout[i].colour = (offset == 16)? 'b' : 'w';
-        layout[i].type = 'k';
+        layout[i + offset].pos.col = 'e';
+        layout[i + offset].pos.row = (offset == 16)? 8 : 1;
+        layout[i + offset].colour = (offset == 16)? 'b' : 'w';
+        layout[i + offset].type = 'k';
+    }
+
+    for (int i = 0; i < NUM_PIECES; i++) {
+        layout[i].hasMoved = false;
     }
 }
 
@@ -1150,6 +1324,16 @@ void printBoard(board_td* brd) {
 
         printf("\n\n");
     }
+
+    if (brd->turn == 'w') {
+        printf("White");
+    } else if (brd->turn == 'b') {
+        printf("Black");
+    } else {
+        printf("ERROR");
+    }
+    printf("'s turn\n\n");
+    
 }
 
 //write a board out into a text file 
@@ -1162,11 +1346,19 @@ void writeBoard(board_td* brd, char* name) {
     piece_td* layout = brd->layout;
     int numPieces = brd->numPieces;
 
+    char moveStr[numPieces];
+
+    for (int i = 0; i < numPieces; i++) {
+        moveStr[i] = '0';
+    }
+
+    int stringIndex = 0;
+
     //for every row
-    for (int r = 8; r >= 1; r--) { 
+    for (int r = 8; r >= 1; --r) { 
 
         //for every column
-        for (char c = 'a'; c <= 'h'; c = c + 1) { 
+        for (char c = 'a'; c <= 'h'; ++c) { 
             
             //set a default output 
             char output = '.';
@@ -1176,7 +1368,17 @@ void writeBoard(board_td* brd, char* name) {
                 
                 //check whether current coords match the current piece
                 if (layout[i].pos.row == r && layout[i].pos.col == c) { 
+                    
+                    //save the piece 
                     output = layout[i].type - ((layout[i].colour == 'w')? 32 : 0); 
+                    
+                    //insert into the hasMoved string 
+                    if (layout[i].hasMoved) {
+                        moveStr[stringIndex] = '1';
+                    } 
+
+                    ++stringIndex;
+
                     break;
                 }
             }
@@ -1187,7 +1389,11 @@ void writeBoard(board_td* brd, char* name) {
         fprintf(fp, "%c", '\n');
     }
 
-    fprintf(fp, "%c", brd->turn);    
+    fprintf(fp, "%c\n", brd->turn);
+
+    for (int i = 0; i < numPieces; i++) {
+        fprintf(fp, "%c", moveStr[i]);
+    }
 
     fclose(fp);
 }
@@ -1204,15 +1410,19 @@ board_td* readBoard(char* name) {
     //open the file 
     FILE* fp = fopen(name, "r");
 
+    if (fp == NULL) {
+        return NULL;
+    }
+
     //set up pointers to read the input file 
-    char* input = malloc(sizeof(char) * 74);
+    char* input = malloc(sizeof(char) * 106);
     char* inputTraverse = input;
 
     //load in the file 
-    int read = fread(input, sizeof(char), 74, fp);
+    int read = fread(input, sizeof(char), 106, fp);
 
     //check the proper read-in 
-    if (read != 73) {
+    if (read != 106) {
         printf("you goofed reading, you read %i", read);
         return NULL;
     }
@@ -1264,6 +1474,19 @@ board_td* readBoard(char* name) {
     }
 
     brd->turn = *inputTraverse;
+    ++inputTraverse;
+
+    for (int i = 0; i < brd->numPieces; i++) {
+        ++inputTraverse;
+        char readIn = *inputTraverse;
+        if (readIn == '1') {
+            brd->layout[i].hasMoved = true;
+        } else if (readIn == '0') {
+            brd->layout[i].hasMoved = false;
+        } else {
+            printf("problem reading in hasMoved");
+        }
+    }
 
     //free the string we used to read the board in 
     free(input);
@@ -1293,7 +1516,15 @@ void dumpBoard(board_td* brd) {
             printf("NULL\n");
         } else {
         
-            printf("Piece %i - %c %c at %c%i \n", i, layout[i].colour, layout[i].type, layout[i].pos.col, layout[i].pos.row);
+            printf("Piece %i - %c %c at %c%i - ", i, layout[i].colour, layout[i].type, layout[i].pos.col, layout[i].pos.row);
+
+            if (layout[i].hasMoved) {
+                printf("Has Moved");
+            } else {
+                printf("Hasn't Moved");
+            }
+
+            printf("\n");
 
             for (int j = 0; layout[i].moves[j].row != 0; ++j) {
                 printf("    %c%i\n", layout[i].moves[j].col, layout[i].moves[j].row);

@@ -1,3 +1,6 @@
+//allow bool (boolean) variables 
+typedef enum {false, true} bool; 
+
 //define the smallest int value
 #define INT_MIN -2147483648
 
@@ -12,6 +15,9 @@
 
 //the number of pieces boards should hold 
 #define NUM_PIECES 32
+
+//define the length of a string
+#define STR_LEN 128
 
 //a struct to hold a move 
 struct move {
@@ -32,6 +38,7 @@ struct piece {
     char colour;
     square_td pos;
     square_td moves[NUM_MOVES];
+    bool hasMoved;
 } typedef piece_td;
 
 //a struct to represent chess boards
@@ -43,14 +50,11 @@ struct board {
 } typedef board_td;
 
 //constants for piece values
-#define PAWN_VAL 10
-#define ROOK_VAL 50
-#define KNIG_VAL 30
-#define BISH_VAL 30
-#define QUEE_VAL 90
-
-//allow bool (boolean) variables 
-typedef enum {false, true} bool; 
+#define PAWN_VAL 100
+#define ROOK_VAL 500
+#define KNIG_VAL 300
+#define BISH_VAL 300
+#define QUEE_VAL 900
 
 //allocate and return a pointer to a new board struct in memory
 board_td* newBoard();  
@@ -72,6 +76,12 @@ bool equalSq(square_td, square_td);
 
 //check if square sq on board brd is occupied, returning a pointer to the occupying piece if so
 int occupant(board_td*, square_td);  
+
+//the frontend to playing against the bot 
+void runPlay();
+
+//trim the '\n' off the end of the given string
+void trimNewline(char*);
 
 //get the score for board_td struct for a given colour 
 int getScore(board_td*);  
