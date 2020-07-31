@@ -102,11 +102,11 @@ void runPlay() {
     char* result;
 
     do {
-        //system("clear");
+        system("clear");
         printBoard(brd);
 
         //debug
-        dumpBoard(brd);
+        //dumpBoard(brd);
         
         printf("Enter command to (q)uit, (r)estart, (s)ave game, (l)oad game, or (m)ake a move: ");
         input = getchar();
@@ -218,6 +218,8 @@ void runPlay() {
                             printf("White wins!");
                             exit(0);
                         }
+
+                        printf("Reggie is moving...\n");
 
                         move_td* blackMove = simulate(brd, SIM_DEPTH);
 
@@ -1132,11 +1134,11 @@ move_td* simulate(board_td* brd, int depth) {
                     //reset the hypothetical board to the original 
                     softCopyBoard(&hypo, brd);
 
-                    if (depth == 3 && i == 0 && j == 0) {
+                    /*if (depth == 3 && i == 0 && j == 0) {
                         //debug 
                         printBoard(hypo);
                         dumpBoard(hypo);
-                    }
+                    }*/
                     
                     //make the current move in the traversal 
                     movePiece(hypo, i, j);
@@ -1168,10 +1170,10 @@ move_td* simulate(board_td* brd, int depth) {
                     //get the score for me 
                     int finalScore = getScore(hypo);
                     
-                    if (depth == 3) {
+                    /*if (depth == 3) {
                         //debug
                         printf("-+=+- Running simulation depth 3: piece %i, move %i, got score %i\n", i, j, finalScore);
-                    }
+                    }*/
                     
                     //log it if it's the best
                     if (finalScore >= bestMove->score) {
@@ -1302,9 +1304,19 @@ void printBoard(board_td* brd) {
     piece_td* layout = brd->layout;
     int numPieces = brd->numPieces;
 
+    printf("    ");
+
+    for (char i = 'a'; i <= 'h'; i++) {
+        printf("%c ", i);
+    }
+
+    printf("\n   ----------------\n");
+
     //for every row
     for (int r = 8; r >= 1; r--) { 
         
+        printf("%i | ", r);
+
         //for every column
         for (char c = 'a'; c <= 'h'; c = c + 1) { 
             char output = '.';
@@ -1325,14 +1337,14 @@ void printBoard(board_td* brd) {
         printf("\n\n");
     }
 
-    if (brd->turn == 'w') {
+    /*if (brd->turn == 'w') {
         printf("White");
     } else if (brd->turn == 'b') {
         printf("Black");
     } else {
         printf("ERROR");
     }
-    printf("'s turn\n\n");
+    printf("'s turn\n\n");*/
     
 }
 
